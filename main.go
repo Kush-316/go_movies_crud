@@ -1,6 +1,15 @@
 package main
 
-import "github.com/gorilla/mux"
+import (
+	"math/rand"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"strconv"
+
+	"github.com/gorilla/mux"
+)
 
 type Movie struct {
 	ID       string    `json:"id"`
@@ -14,10 +23,80 @@ type Director struct {
 	LastName  string `json:"lastname"`
 }
 
-var Movies []Movie
+var movies []Movie
+func getMovies(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(movies)
+}
 
+func deleteMovie(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type","application/json")
+	params := mux.Vars(r)
+	for index, item := range movies {
+		if item.ID == params["id"]{
+			movies = append(movies[:index],movies[index+1:]...)
+			break
+		}
+	}
+	json.NewEncoder(w).Encode(movies)
+}
+
+func getMovie(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type","application/json")
+	params := mux.Vars(r)
+	for _, item := range movies {
+		if item.ID == params["id"]{
+			json.NewEncoder(w).Encode(item)
+			return
+		}
+	}
+}
+func createMovie(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type","application/json")
+	var movie Movie
+	_ = json.NewDecoder(r.Body).Decode(&movie)
+	movie.ID = strconv.Itoa(rand.Intn(1000000000))
+	movies = append(movies, movie)
+	json.NewEncoder(w).Encode(movie)
+}
+func updateMovie(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type","application/json")
+	params := mux.Vars(r)
+	for index, item:= range movies{
+		if item.ID == params["id"]{
+			movies = append(movies[:index], movies[index+1:]...)
+		}
+	}
+}
 func main() {
 	r := mux.NewRouter()
 
-	r.HandleFunc()
+	movies = append(movies, Movie{
+		ID: "1",
+		Isbn: "145354",
+		Title: "I AM MUSIC",
+		Director: &Director{
+			FirstName: "Playboi",
+			LastName: "Carti",
+		},
+	})
+	movies = append(movies, Movie{
+		ID: "2",
+		Isbn: "265147",
+		Title: "GNX",
+		Director: &Director{
+			FirstName: "Kendrick",
+			LastName: "Lamar",
+		},
+	})
+
+	r.HandleFunc("/movies", getMovies).Methods("GET")
+	r.HandleFunc("/movies/{id}", getMovie).Methods("GET")
+	r.HandleFunc("/movies", createMovie).Methods("POST")
+	r.HandleFunc("movies/{id}", updateMovie).Methods("POST")
+	r.HandleFunc("/movies/{id}", deleteMovie).Methods("DELETE")
+
+	fmt.Printf("Starting server at port 8000")
+	log.Fatal(http.ListenAndServe(":8000", r))
+
 }
